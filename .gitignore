@@ -1,0 +1,38 @@
+# Compiled output
+dist/
+build/
+
+# Node
+node_modules/
+
+# Env files (never commit secrets)
+.env
+.env.prod
+.env.local
+.env.staging
+# Keep example files
+!.env.example
+
+# Uploads
+uploads/
+
+# Firebase service account
+firebase-service-account.json
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Test coverage
+coverage/
+scripts/*
+postman/
+.env.example
