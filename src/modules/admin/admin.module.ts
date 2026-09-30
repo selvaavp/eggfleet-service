@@ -10,6 +10,7 @@ import { Inventory } from '../../database/entities/inventory.entity';
 import { VanLoad } from '../../database/entities/van-load.entity';
 import { VanAssignment } from '../../database/entities/van-assignment.entity';
 import { Delivery } from '../../database/entities/delivery.entity';
+import { DeliveryItem } from '../../database/entities/delivery-item.entity';
 import { Payment } from '../../database/entities/payment.entity';
 import { PaymentDelivery } from '../../database/entities/payment-delivery.entity';
 import { VendorPayment } from '../../database/entities/vendor-payment.entity';
@@ -31,6 +32,7 @@ import { AdminPaymentsController } from './controllers/admin-payments.controller
 import { AdminDamagedEggsController } from './controllers/admin-damaged-eggs.controller';
 import { AdminExpensesController } from './controllers/admin-expenses.controller';
 import { AdminNotificationsController } from './controllers/admin-notifications.controller';
+import { AdminReportsController } from './controllers/admin-reports.controller';
 import { AdminDashboardService } from './services/admin-dashboard.service';
 import { AdminVansService } from './services/admin-vans.service';
 import { AdminRoutesService } from './services/admin-routes.service';
@@ -43,12 +45,13 @@ import { AdminHandoversService } from './services/admin-handovers.service';
 import { AdminPaymentsService } from './services/admin-payments.service';
 import { AdminDamagedEggsService } from './services/admin-damaged-eggs.service';
 import { AdminExpensesService } from './services/admin-expenses.service';
+import { AdminReportsService } from './services/admin-reports.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       Van, Route, RouteStore, Store, User, Vendor,
-      Inventory, VanLoad, VanAssignment, Delivery,
+      Inventory, VanLoad, VanAssignment, Delivery, DeliveryItem,
       Payment, PaymentDelivery, VendorPayment, Handover, HandoverEggItem, DamagedEgg,
       Expense,
     ]),
@@ -68,6 +71,7 @@ import { AdminExpensesService } from './services/admin-expenses.service';
     AdminDamagedEggsController,
     AdminExpensesController,
     AdminNotificationsController,
+    AdminReportsController,
   ],
   providers: [
     AdminDashboardService,
@@ -82,6 +86,7 @@ import { AdminExpensesService } from './services/admin-expenses.service';
     AdminPaymentsService,
     AdminDamagedEggsService,
     AdminExpensesService,
+    AdminReportsService,
   ],
 })
 export class AdminModule {}
