@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Not, Repository } from 'typeorm';
 import { VanAssignment } from '../../../database/entities/van-assignment.entity';
 import { VanLoad } from '../../../database/entities/van-load.entity';
 import { Delivery } from '../../../database/entities/delivery.entity';
@@ -35,11 +35,26 @@ export class AdminAssignmentsService {
     return { message: 'Assignments retrieved', data: items, meta: buildMeta(total, norm.page, norm.limit) };
   }
 
+  /** Mirrors the DB partial unique indexes: one ACTIVE assignment per driver and per van per day. */
+  private async assertNoActiveConflict(
+    target: { driverId: string; vanId: string; assignedDate: string },
+    excludeId?: string,
+  ) {
+    const others = {
+      assignedDate: target.assignedDate,
+      status: VanAssignmentStatus.ACTIVE,
+      ...(excludeId ? { id: Not(excludeId) } : {}),
+    };
+    if (await this.assignmentRepo.findOne({ where: { ...others, driverId: target.driverId } })) {
+      throw new ConflictException('Driver already has an active assignment for this date');
+    }
+    if (await this.assignmentRepo.findOne({ where: { ...others, vanId: target.vanId } })) {
+      throw new ConflictException('Van already has an active assignment for this date');
+    }
+  }
+
   async create(dto: CreateVanAssignmentDto) {
-    const existing = await this.assignmentRepo.findOne({
-      where: { driverId: dto.driverId, assignedDate: dto.assignedDate, status: VanAssignmentStatus.ACTIVE },
-    });
-    if (existing) throw new ConflictException('Driver already has an active assignment for this date');
+    await this.assertNoActiveConflict(dto);
     const assignment = this.assignmentRepo.create({
       driverId: dto.driverId,
       vanId: dto.vanId,
@@ -73,22 +88,35 @@ export class AdminAssignmentsService {
   async updateStatus(id: string, status: VanAssignmentStatus) {
     const assignment = await this.assignmentRepo.findOne({ where: { id } });
     if (!assignment) throw new NotFoundException('Assignment not found');
+    if (status === VanAssignmentStatus.ACTIVE) await this.assertNoActiveConflict(assignment, id);
     assignment.status = status;
     await this.assignmentRepo.save(assignment);
     return { message: 'Assignment status updated', data: assignment };
   }
 
   async update(id: string, dto: { driverId?: string; vanId?: string; routeId?: string }) {
-    const assignment = await this.assignmentRepo.findOne({
-      where: { id },
-      relations: ['driver', 'van', 'route'],
-    });
+    // Load without relations: loaded driver/van/route objects would override the changed FK ids on save.
+    const assignment = await this.assignmentRepo.findOne({ where: { id } });
     if (!assignment) throw new NotFoundException('Assignment not found');
+    if (assignment.status === VanAssignmentStatus.ACTIVE && (dto.driverId || dto.vanId)) {
+      await this.assertNoActiveConflict(
+        {
+          driverId: dto.driverId ?? assignment.driverId,
+          vanId: dto.vanId ?? assignment.vanId,
+          assignedDate: assignment.assignedDate,
+        },
+        id,
+      );
+    }
     if (dto.driverId) assignment.driverId = dto.driverId;
     if (dto.vanId) assignment.vanId = dto.vanId;
     if (dto.routeId) assignment.routeId = dto.routeId;
     await this.assignmentRepo.save(assignment);
-    return { message: 'Assignment updated', data: assignment };
+    const updated = await this.assignmentRepo.findOne({
+      where: { id },
+      relations: ['driver', 'van', 'route'],
+    });
+    return { message: 'Assignment updated', data: updated };
   }
 
   async remove(id: string) {

@@ -6,15 +6,23 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
-  Unique,
+  Index,
 } from 'typeorm';
 import { Van } from './van.entity';
 import { Route } from './route.entity';
 import { User } from './user.entity';
 import { VanAssignmentStatus } from '../../common/enums/van-assignment-status.enum';
 
-@Unique('UQ_van_assignment_driver_date', ['driverId', 'assignedDate'])
-@Unique('UQ_van_assignment_van_date', ['vanId', 'assignedDate'])
+// Only ACTIVE assignments must be unique per van/driver per day — cancelled/completed
+// rows may repeat. Mirrors the partial indexes in the DB so `synchronize` leaves them alone.
+@Index('UQ_van_assignment_driver_date_active', ['driverId', 'assignedDate'], {
+  unique: true,
+  where: `"status" = 'ACTIVE'`,
+})
+@Index('UQ_van_assignment_van_date_active', ['vanId', 'assignedDate'], {
+  unique: true,
+  where: `"status" = 'ACTIVE'`,
+})
 @Entity('van_assignments')
 export class VanAssignment {
   @PrimaryGeneratedColumn('uuid')
